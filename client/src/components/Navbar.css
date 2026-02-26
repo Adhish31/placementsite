@@ -1,0 +1,70 @@
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 5%;
+    position: fixed;
+    top: 1.5rem;
+    left: 5%;
+    right: 5%;
+    z-index: 1000;
+    height: 70px;
+    border-radius: 20px !important;
+}
+
+.logo-text {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+}
+
+.logo-text span {
+    color: var(--primary);
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-links a {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-dim);
+}
+
+.nav-links a:hover {
+    color: var(--primary);
+    text-shadow: 0 0 10px var(--primary-glow);
+}
+
+.nav-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.login-btn {
+    background: transparent;
+    color: var(--text-main);
+    padding: 0.6rem 1.5rem;
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+}
+
+.login-btn:hover {
+    background: var(--glass);
+}
+
+.signup-btn {
+    background: var(--primary);
+    color: white;
+    padding: 0.6rem 1.5rem;
+    border-radius: 10px;
+    font-weight: 600;
+    box-shadow: 0 4px 15px var(--primary-glow);
+}
+
+.signup-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px var(--primary-glow);
+}

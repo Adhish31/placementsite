@@ -12,7 +12,23 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Request logger
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`, req.body);
+    next();
+});
+
 // Routes
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/questions', require('./routes/questionRoutes'));
+app.use('/api/leaderboard', require('./routes/leaderboardRoutes'));
+app.use('/api/forum', require('./routes/forumRoutes'));
+app.use('/api/submissions', require('./routes/submissionRoutes'));
+app.use('/api/resume', require('./routes/resumeRoutes'));
+
+// Serve uploads
+app.use('/uploads', express.static('uploads'));
+
 app.get('/', (req, res) => {
     res.send('Placement Site API is running...');
 });

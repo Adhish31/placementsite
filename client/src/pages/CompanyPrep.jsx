@@ -1,6 +1,5 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import Sidebar from '../components/Sidebar'
 import { motion } from 'framer-motion'
 import { Search, ExternalLink } from 'lucide-react'
 
@@ -17,9 +16,7 @@ const CompanyPrep = () => {
   ];
 
   return (
-    <div className="dashboard-layout">
-      <Sidebar />
-      <main className="dashboard-content">
+    <>
         <header className="dashboard-header">
           <h1>Company <span className="gradient-text">Preparation</span></h1>
           <p>Target specific companies with curated study materials and past interview questions.</p>
@@ -60,7 +57,6 @@ const CompanyPrep = () => {
             </motion.div>
           ))}
         </div>
-      </main>
 
       <style dangerouslySetInnerHTML={{
         __html: `
@@ -132,7 +128,7 @@ const CompanyPrep = () => {
           cursor: pointer;
         }
       `}} />
-    </div>
+    </>
   )
 }
 

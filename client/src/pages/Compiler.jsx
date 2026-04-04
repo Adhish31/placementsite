@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Sidebar from '../components/Sidebar';
 import axios from 'axios';
 import Editor from '@monaco-editor/react';
 import { Play, RotateCcw, Save, ShieldCheck } from 'lucide-react';
@@ -33,70 +32,67 @@ console.log(solution([5, 2, 9, 1, 5, 6]));
     };
 
     return (
-        <div className="dashboard-layout">
-            <Sidebar />
-            <main className="dashboard-content full-height-compiler">
-                <header className="compiler-header">
-                    <div className="title-area">
-                        <h1>Logic <span className="gradient-text">Compiler</span></h1>
-                        <p>Solve challenges and test your snippets in real-time.</p>
-                    </div>
-                    <div className="compiler-actions">
-                        <select
-                            className="lang-select"
-                            value={language}
-                            onChange={(e) => setLanguage(e.target.value)}
-                        >
-                            <option value="javascript">JavaScript</option>
-                            <option value="python">Python</option>
-                            <option value="cpp">C++</option>
-                            <option value="java">Java</option>
-                        </select>
-                        <button className="icon-btn" onClick={() => setCode("")}><RotateCcw size={18} /></button>
-                        <button className="icon-btn"><Save size={18} /></button>
-                        <button className="primary-cta run-btn" onClick={runCode}>
-                            <Play size={18} fill="white" /> Run Code
-                        </button>
-                    </div>
-                </header>
-
-                <div className="editor-container glass-card">
-                    <div className="editor-main">
-                        <Editor
-                            height="60vh"
-                            language={language}
-                            theme="vs-dark"
-                            value={code}
-                            onChange={(val) => setCode(val)}
-                            options={{
-                                fontSize: 16,
-                                minimap: { enabled: false },
-                                scrollBeyondLastLine: false,
-                                borderRadius: 10,
-                                automaticLayout: true,
-                            }}
-                        />
-                    </div>
-                    <div className="console-area">
-                        <div className="console-header">
-                            <span>Console Output</span>
-                            <div className="status-dot green"></div>
-                        </div>
-                        <pre className="console-output">
-                            {output || "Output will appear here after running your code..."}
-                        </pre>
-                    </div>
+        <>
+            <header className="compiler-header">
+                <div className="title-area">
+                    <h1>Logic <span className="gradient-text">Compiler</span></h1>
+                    <p>Solve challenges and test your snippets in real-time.</p>
                 </div>
-
-                <div className="ai-recommendation glass-card">
-                    <div className="ai-header">
-                        <ShieldCheck className="ai-icon" />
-                        <h3>AI Recommendation</h3>
-                    </div>
-                    <p>Based on your performance, you should practice <b>Dynamic Programming</b> problems next. Would you like to start a relevant challenge?</p>
-                    <button className="prep-btn mini">Go to DP Problems</button>
+                <div className="compiler-actions">
+                    <select
+                        className="lang-select"
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                    >
+                        <option value="javascript">JavaScript</option>
+                        <option value="python">Python</option>
+                        <option value="cpp">C++</option>
+                        <option value="java">Java</option>
+                    </select>
+                    <button className="icon-btn" onClick={() => setCode("")}><RotateCcw size={18} /></button>
+                    <button className="icon-btn"><Save size={18} /></button>
+                    <button className="primary-cta run-btn" onClick={runCode}>
+                        <Play size={18} fill="white" /> Run Code
+                    </button>
                 </div>
-            </main>
+            </header>
+
+            <div className="editor-container glass-card">
+                <div className="editor-main">
+                    <Editor
+                        height="60vh"
+                        language={language}
+                        theme="vs-dark"
+                        value={code}
+                        onChange={(val) => setCode(val)}
+                        options={{
+                            fontSize: 16,
+                            minimap: { enabled: false },
+                            scrollBeyondLastLine: false,
+                            borderRadius: 10,
+                            automaticLayout: true,
+                        }}
+                    />
+                </div>
+                <div className="console-area">
+                    <div className="console-header">
+                        <span>Console Output</span>
+                        <div className="status-dot green"></div>
+                    </div>
+                    <pre className="console-output">
+                        {output || "Output will appear here after running your code..."}
+                    </pre>
+                </div>
+            </div>
+
+            <div className="ai-recommendation glass-card">
+                <div className="ai-header">
+                    <ShieldCheck className="ai-icon" />
+                    <h3>AI Recommendation</h3>
+                </div>
+                <p>Based on your performance, you should practice <b>Dynamic Programming</b> problems next. Would you like to start a relevant challenge?</p>
+                <button className="prep-btn mini">Go to DP Problems</button>
+            </div>
 
             <style dangerouslySetInnerHTML={{
                 __html: `
@@ -183,7 +179,7 @@ console.log(solution([5, 2, 9, 1, 5, 6]));
                 .ai-recommendation p { flex: 1; font-size: 0.95rem; color: var(--text-dim); }
                 .prep-btn.mini { width: auto; padding: 0.6rem 1.5rem; font-size: 0.9rem; }
             `}} />
-        </div>
+        </>
     );
 };
 

@@ -5,7 +5,6 @@ import {
     ArrowLeft, BookOpen, ClipboardList, HelpCircle, Lightbulb,
     CheckCircle2, ChevronRight, Download
 } from 'lucide-react';
-import Sidebar from '../components/Sidebar';
 import './CompanyDetail.css';
 
 const CompanyDetail = () => {
@@ -76,115 +75,112 @@ const CompanyDetail = () => {
     const data = companyData[name] || companyData['Google']; // Fallback
 
     return (
-        <div className="dashboard-layout">
-            <Sidebar />
-            <main className="dashboard-content">
-                <motion.button
-                    className="back-btn"
-                    onClick={() => navigate('/company-prep')}
-                    whileHover={{ x: -5 }}
-                >
-                    <ArrowLeft size={20} /> Back to Companies
-                </motion.button>
+        <>
+            <motion.button
+                className="back-btn"
+                onClick={() => navigate('/company-prep')}
+                whileHover={{ x: -5 }}
+            >
+                <ArrowLeft size={20} /> Back to Companies
+            </motion.button>
 
-                <header className="company-header">
-                    <div className="company-branding">
-                        <div className="company-logo-large" style={{ backgroundColor: data.color }}>
-                            {name[0]}
-                        </div>
-                        <div>
-                            <h1 className="gradient-text">{name} Preparation</h1>
-                            <p>Everything you need to crack the {name} interview.</p>
-                        </div>
+            <header className="company-header">
+                <div className="company-branding">
+                    <div className="company-logo-large" style={{ backgroundColor: data.color }}>
+                        {name[0]}
                     </div>
-                    <button className="primary-cta download-btn">
-                        <Download size={18} /> Download PDF Guide
-                    </button>
-                </header>
+                    <div>
+                        <h1 className="gradient-text">{name} Preparation</h1>
+                        <p>Everything you need to crack the {name} interview.</p>
+                    </div>
+                </div>
+                <button className="primary-cta download-btn">
+                    <Download size={18} /> Download PDF Guide
+                </button>
+            </header>
 
-                <section className="detail-grid">
-                    {/* Exam Pattern */}
-                    <motion.div
-                        className="detail-card glass-card"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                    >
-                        <div className="card-title">
-                            <ClipboardList className="icon purple" />
-                            <h3>Exam Pattern</h3>
-                        </div>
-                        <div className="pattern-list">
-                            {data.pattern.map((item, i) => (
-                                <div key={i} className="pattern-item">
-                                    <span className="round-name">{item.round}</span>
-                                    <p className="round-desc">{item.details}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
+            <section className="detail-grid">
+                {/* Exam Pattern */}
+                <motion.div
+                    className="detail-card glass-card"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                >
+                    <div className="card-title">
+                        <ClipboardList className="icon purple" />
+                        <h3>Exam Pattern</h3>
+                    </div>
+                    <div className="pattern-list">
+                        {data.pattern.map((item, i) => (
+                            <div key={i} className="pattern-item">
+                                <span className="round-name">{item.round}</span>
+                                <p className="round-desc">{item.details}</p>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
 
-                    {/* Syllabus */}
-                    <motion.div
-                        className="detail-card glass-card"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                    >
-                        <div className="card-title">
-                            <BookOpen className="icon blue" />
-                            <h3>Focus Syllabus</h3>
-                        </div>
-                        <ul className="syllabus-list">
-                            {data.syllabus.map((item, i) => (
-                                <li key={i}><CheckCircle2 size={16} /> {item}</li>
-                            ))}
-                        </ul>
-                    </motion.div>
+                {/* Syllabus */}
+                <motion.div
+                    className="detail-card glass-card"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                >
+                    <div className="card-title">
+                        <BookOpen className="icon blue" />
+                        <h3>Focus Syllabus</h3>
+                    </div>
+                    <ul className="syllabus-list">
+                        {data.syllabus.map((item, i) => (
+                            <li key={i}><CheckCircle2 size={16} /> {item}</li>
+                        ))}
+                    </ul>
+                </motion.div>
 
-                    {/* Previous Questions */}
-                    <motion.div
-                        className="detail-card glass-card span-2"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                    >
-                        <div className="card-title">
-                            <HelpCircle className="icon yellow" />
-                            <h3>Previous Questions</h3>
-                        </div>
-                        <div className="questions-grid">
-                            {data.prevQuestions.map((q, i) => (
-                                <div key={i} className="question-item glass-card">
-                                    <p>"{q}"</p>
-                                    <button className="view-sol">View Solution <ChevronRight size={14} /></button>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
+                {/* Previous Questions */}
+                <motion.div
+                    className="detail-card glass-card span-2"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                >
+                    <div className="card-title">
+                        <HelpCircle className="icon yellow" />
+                        <h3>Previous Questions</h3>
+                    </div>
+                    <div className="questions-grid">
+                        {data.prevQuestions.map((q, i) => (
+                            <div key={i} className="question-item glass-card">
+                                <p>"{q}"</p>
+                                <button className="view-sol">View Solution <ChevronRight size={14} /></button>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
 
-                    {/* Prep Tips */}
-                    <motion.div
-                        className="detail-card glass-card span-2"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                    >
-                        <div className="card-title">
-                            <Lightbulb className="icon green" />
-                            <h3>Pro Tips</h3>
-                        </div>
-                        <div className="tips-container">
-                            {data.tips.map((tip, i) => (
-                                <div key={i} className="tip-item">
-                                    <div className="tip-number">{i + 1}</div>
-                                    <p>{tip}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </motion.div>
-                </section>
-            </main>
-        </div>
+                {/* Prep Tips */}
+                <motion.div
+                    className="detail-card glass-card span-2"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                >
+                    <div className="card-title">
+                        <Lightbulb className="icon green" />
+                        <h3>Pro Tips</h3>
+                    </div>
+                    <div className="tips-container">
+                        {data.tips.map((tip, i) => (
+                            <div key={i} className="tip-item">
+                                <div className="tip-number">{i + 1}</div>
+                                <p>{tip}</p>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
+            </section>
+        </>
     );
 };
 

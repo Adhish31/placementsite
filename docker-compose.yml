@@ -1,21 +1,24 @@
-services:
-  mongodb:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
+version: '3.8'
 
+services:
   app:
     build: .
+    container_name: placement-app
     ports:
       - "5000:5000"
       - "5173:5173"
-    environment:
-      - MONGODB_URI=mongodb://mongodb:27017/placementsite
-      - JWT_SECRET=your_super_secret_key_here
     depends_on:
-      - mongodb
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/placementdb
+
+  mongo:
+    image: mongo
+    container_name: mongo-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
 
 volumes:
-  mongodb_data:
+  mongo-data:

@@ -1,0 +1,129 @@
+.leaderboard-top-section {
+    margin-bottom: 4rem;
+    display: flex;
+    justify-content: center;
+}
+
+.top-three {
+    display: flex;
+    align-items: flex-end;
+    gap: 2rem;
+    width: 100%;
+    max-width: 600px;
+    justify-content: center;
+}
+
+.podium {
+    flex: 1;
+    background: var(--glass);
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 2rem;
+    position: relative;
+    border: 1px solid var(--glass-border);
+    border-bottom: none;
+}
+
+.podium.gold {
+    background: linear-gradient(180deg, rgba(255, 189, 46, 0.15) 0%, rgba(255, 189, 46, 0.05) 100%);
+    border-color: rgba(255, 189, 46, 0.3);
+}
+
+.podium.silver {
+    background: linear-gradient(180deg, rgba(173, 181, 189, 0.15) 0%, rgba(173, 181, 189, 0.05) 100%);
+}
+
+.podium.bronze {
+    background: linear-gradient(180deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.05) 100%);
+}
+
+.podium-avatar {
+    width: 60px;
+    height: 60px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 0 20px var(--primary-glow);
+}
+
+.podium-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.podium-rank {
+    font-size: 1.5rem;
+    font-weight: 900;
+    opacity: 0.5;
+}
+
+.gold-crown {
+    position: absolute;
+    top: -30px;
+    color: #ffbd2e;
+    width: 40px;
+    height: 40px;
+}
+
+.leaderboard-container {
+    padding: 1rem;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+    text-align: left;
+    padding: 1.2rem 1rem;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.leaderboard-table th {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.me {
+    background: var(--primary-glow);
+    transition: 0.3s;
+}
+
+.name-bold {
+    font-weight: 600;
+}
+
+.college-dim {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+}
+
+.score-purple {
+    color: var(--primary);
+    font-weight: 800;
+    font-size: 1.1rem;
+}
+
+.rank-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+}
+
+.crown-icon {
+    color: #ffbd2e;
+    width: 18px;
+}

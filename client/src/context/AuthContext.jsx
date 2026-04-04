@@ -2,6 +2,20 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const api = axios.create({
+    baseURL: API_BASE_URL,
+    timeout: 10000,
+});
+
+const normalizeApiError = (err, fallbackMessage) => {
+    if (err?.response?.data?.message) return err.response.data.message;
+    if (err?.code === 'ECONNABORTED') return 'Request timed out. Please try again.';
+    if (err?.message === 'Network Error') {
+        return `Cannot connect to server (${API_BASE_URL}). Please start backend and try again.`;
+    }
+    return fallbackMessage;
+};
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -12,7 +26,7 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         if (token) {
-            axios.defaults.headers.common['x-auth-token'] = token;
+            api.defaults.headers.common['x-auth-token'] = token;
             fetchUser();
         } else {
             setLoading(false);
@@ -21,7 +35,7 @@ export const AuthProvider = ({ children }) => {
 
     const fetchUser = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/auth/me');
+            const res = await api.get('/api/auth/me');
             setUser(res.data);
         } catch (err) {
             console.error('Fetch user error:', err);
@@ -32,28 +46,36 @@ export const AuthProvider = ({ children }) => {
     };
 
     const login = async (email, password) => {
-        const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
-        const { token, user } = res.data;
-        localStorage.setItem('token', token);
-        setToken(token);
-        setUser(user);
-        return user;
+        try {
+            const res = await api.post('/api/auth/login', { email, password });
+            const { token, user } = res.data;
+            localStorage.setItem('token', token);
+            setToken(token);
+            setUser(user);
+            return user;
+        } catch (err) {
+            throw new Error(normalizeApiError(err, 'Invalid email or password'));
+        }
     };
 
     const register = async (userData) => {
-        const res = await axios.post('http://localhost:5000/api/auth/register', userData);
-        const { token, user } = res.data;
-        localStorage.setItem('token', token);
-        setToken(token);
-        setUser(user);
-        return user;
+        try {
+            const res = await api.post('/api/auth/register', userData);
+            const { token, user } = res.data;
+            localStorage.setItem('token', token);
+            setToken(token);
+            setUser(user);
+            return user;
+        } catch (err) {
+            throw new Error(normalizeApiError(err, 'Registration failed. Please try again.'));
+        }
     };
 
     const logout = () => {
         localStorage.removeItem('token');
         setToken(null);
         setUser(null);
-        delete axios.defaults.headers.common['x-auth-token'];
+        delete api.defaults.headers.common['x-auth-token'];
     };
 
     return (

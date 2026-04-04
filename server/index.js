@@ -25,6 +25,7 @@ app.use('/api/leaderboard', require('./routes/leaderboardRoutes'));
 app.use('/api/forum', require('./routes/forumRoutes'));
 app.use('/api/submissions', require('./routes/submissionRoutes'));
 app.use('/api/resume', require('./routes/resumeRoutes'));
+app.use('/api/interview', require('./routes/interviewRoutes'));
 
 // Serve uploads
 app.use('/uploads', express.static('uploads'));

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Sidebar from '../components/Sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Users, FilePlus, Database, BarChart3, Plus,
@@ -25,148 +24,145 @@ const AdminDashboard = () => {
     ];
 
     return (
-        <div className="dashboard-layout">
-            <Sidebar />
-            <main className="dashboard-content">
-                <header className="dashboard-header admin-flex">
-                    <div>
-                        <h1>System <span className="gradient-text">Command</span></h1>
-                        <p>Central control for content, users, and platform intelligence.</p>
-                    </div>
-                    <div className="admin-actions">
-                        <button className="secondary-cta"><Settings size={18} /> Settings</button>
-                        <button className="primary-cta" onClick={() => setShowModal(true)}>
-                            <Plus size={20} /> New Content
-                        </button>
-                    </div>
-                </header>
+        <>
+            <header className="dashboard-header admin-flex">
+                <div>
+                    <h1>System <span className="gradient-text">Command</span></h1>
+                    <p>Central control for content, users, and platform intelligence.</p>
+                </div>
+                <div className="admin-actions">
+                    <button className="secondary-cta"><Settings size={18} /> Settings</button>
+                    <button className="primary-cta" onClick={() => setShowModal(true)}>
+                        <Plus size={20} /> New Content
+                    </button>
+                </div>
+            </header>
 
-                <nav className="admin-tabs">
-                    <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>Overview</button>
-                    <button className={activeTab === 'content' ? 'active' : ''} onClick={() => setActiveTab('content')}>Question Bank</button>
-                    <button className={activeTab === 'users' ? 'active' : ''} onClick={() => setActiveTab('users')}>Students</button>
-                </nav>
+            <nav className="admin-tabs">
+                <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>Overview</button>
+                <button className={activeTab === 'content' ? 'active' : ''} onClick={() => setActiveTab('content')}>Question Bank</button>
+                <button className={activeTab === 'users' ? 'active' : ''} onClick={() => setActiveTab('users')}>Students</button>
+            </nav>
 
-                <AnimatePresence mode="wait">
-                    {activeTab === 'stats' && (
-                        <motion.div key="stats" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                            <section className="stats-grid">
-                                {adminStats.map((stat, i) => (
-                                    <div key={i} className="stat-card glass-card">
-                                        <div className="stat-header">
-                                            {stat.icon}
-                                            <span className={`stat-change ${stat.change.startsWith('+') ? 'up' : 'down'}`}>
-                                                {stat.change}
-                                            </span>
+            <AnimatePresence mode="wait">
+                {activeTab === 'stats' && (
+                    <motion.div key="stats" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                        <section className="stats-grid">
+                            {adminStats.map((stat, i) => (
+                                <div key={i} className="stat-card glass-card">
+                                    <div className="stat-header">
+                                        {stat.icon}
+                                        <span className={`stat-change ${stat.change.startsWith('+') ? 'up' : 'down'}`}>
+                                            {stat.change}
+                                        </span>
+                                    </div>
+                                    <div className="stat-info">
+                                        <span className="stat-label">{stat.label}</span>
+                                        <span className="stat-value">{stat.value}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </section>
+
+                        <div className="admin-grid-layout">
+                            <div className="glass-card table-section">
+                                <h3>Recent Reports</h3>
+                                <div className="report-list">
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className="report-item">
+                                            <div className="badge warn">Critical</div>
+                                            <p>API Latency spike detected in /api/v1/compiler</p>
+                                            <span>14m ago</span>
                                         </div>
-                                        <div className="stat-info">
-                                            <span className="stat-label">{stat.label}</span>
-                                            <span className="stat-value">{stat.value}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </section>
-
-                            <div className="admin-grid-layout">
-                                <div className="glass-card table-section">
-                                    <h3>Recent Reports</h3>
-                                    <div className="report-list">
-                                        {[1, 2, 3].map(i => (
-                                            <div key={i} className="report-item">
-                                                <div className="badge warn">Critical</div>
-                                                <p>API Latency spike detected in /api/v1/compiler</p>
-                                                <span>14m ago</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="glass-card activity-section">
-                                    <h3>System Health</h3>
-                                    <div className="health-metrics">
-                                        <div className="h-node"><span>CPU</span><div className="h-bar"><div className="h-fill" style={{ width: '25%' }}></div></div></div>
-                                        <div className="h-node"><span>RAM</span><div className="h-bar"><div className="h-fill" style={{ width: '68%' }}></div></div></div>
-                                        <div className="h-node"><span>DISK</span><div className="h-bar"><div className="h-fill" style={{ width: '42%' }}></div></div></div>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
-                        </motion.div>
-                    )}
-
-                    {activeTab === 'content' && (
-                        <motion.div key="content" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                            <div className="glass-card question-manager">
-                                <div className="table-header">
-                                    <h3>Central Question Pool</h3>
-                                    <div className="search-mini">
-                                        <Plus size={14} /> Search
-                                    </div>
-                                </div>
-                                <table className="admin-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Title</th>
-                                            <th>Category</th>
-                                            <th>Difficulty</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {questions.map(q => (
-                                            <tr key={q.id}>
-                                                <td>{q.title}</td>
-                                                <td><span className="cat-tag">{q.category}</span></td>
-                                                <td><span className={`diff-tag ${q.difficulty.toLowerCase()}`}>{q.difficulty}</span></td>
-                                                <td><span className={`status-tag ${q.status.toLowerCase()}`}>{q.status}</span></td>
-                                                <td className="actions-cell">
-                                                    <button className="a-btn"><Edit3 size={16} /></button>
-                                                    <button className="a-btn del"><Trash2 size={16} /></button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Question Creation Modal */}
-                {showModal && (
-                    <div className="modal-overlay">
-                        <motion.div className="admin-modal glass-card" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
-                            <div className="modal-header">
-                                <h3>Create New Mock Problem</h3>
-                                <button className="close-btn" onClick={() => setShowModal(false)}><X size={20} /></button>
-                            </div>
-                            <div className="modal-body">
-                                <div className="form-group">
-                                    <label>Problem Title</label>
-                                    <input type="text" placeholder="e.g. Reverse a Linked List" />
-                                </div>
-                                <div className="form-row">
-                                    <div className="form-group">
-                                        <label>Category</label>
-                                        <select><option>DSA</option><option>OS</option><option>DBMS</option></select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label>Difficulty Level</label>
-                                        <select><option>Easy</option><option>Medium</option><option>Hard</option></select>
-                                    </div>
-                                </div>
-                                <div className="form-group">
-                                    <label>Problem Description (Markdown supported)</label>
-                                    <textarea rows="4" placeholder="Enter problem statement..."></textarea>
+                            <div className="glass-card activity-section">
+                                <h3>System Health</h3>
+                                <div className="health-metrics">
+                                    <div className="h-node"><span>CPU</span><div className="h-bar"><div className="h-fill" style={{ width: '25%' }}></div></div></div>
+                                    <div className="h-node"><span>RAM</span><div className="h-bar"><div className="h-fill" style={{ width: '68%' }}></div></div></div>
+                                    <div className="h-node"><span>DISK</span><div className="h-bar"><div className="h-fill" style={{ width: '42%' }}></div></div></div>
                                 </div>
                             </div>
-                            <div className="modal-footer">
-                                <button className="secondary-cta" onClick={() => setShowModal(false)}>Cancel</button>
-                                <button className="primary-cta"><Save size={18} /> Save to Drafts</button>
-                            </div>
-                        </motion.div>
-                    </div>
+                        </div>
+                    </motion.div>
                 )}
-            </main>
+
+                {activeTab === 'content' && (
+                    <motion.div key="content" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                        <div className="glass-card question-manager">
+                            <div className="table-header">
+                                <h3>Central Question Pool</h3>
+                                <div className="search-mini">
+                                    <Plus size={14} /> Search
+                                </div>
+                            </div>
+                            <table className="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Category</th>
+                                        <th>Difficulty</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {questions.map(q => (
+                                        <tr key={q.id}>
+                                            <td>{q.title}</td>
+                                            <td><span className="cat-tag">{q.category}</span></td>
+                                            <td><span className={`diff-tag ${q.difficulty.toLowerCase()}`}>{q.difficulty}</span></td>
+                                            <td><span className={`status-tag ${q.status.toLowerCase()}`}>{q.status}</span></td>
+                                            <td className="actions-cell">
+                                                <button className="a-btn"><Edit3 size={16} /></button>
+                                                <button className="a-btn del"><Trash2 size={16} /></button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Question Creation Modal */}
+            {showModal && (
+                <div className="modal-overlay">
+                    <motion.div className="admin-modal glass-card" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                        <div className="modal-header">
+                            <h3>Create New Mock Problem</h3>
+                            <button className="close-btn" onClick={() => setShowModal(false)}><X size={20} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label>Problem Title</label>
+                                <input type="text" placeholder="e.g. Reverse a Linked List" />
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Category</label>
+                                    <select><option>DSA</option><option>OS</option><option>DBMS</option></select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Difficulty Level</label>
+                                    <select><option>Easy</option><option>Medium</option><option>Hard</option></select>
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>Problem Description (Markdown supported)</label>
+                                <textarea rows="4" placeholder="Enter problem statement..."></textarea>
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="secondary-cta" onClick={() => setShowModal(false)}>Cancel</button>
+                            <button className="primary-cta"><Save size={18} /> Save to Drafts</button>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
 
             <style dangerouslySetInnerHTML={{
                 __html: `
@@ -225,7 +221,7 @@ const AdminDashboard = () => {
                 .modal-footer { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; }
                 .close-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; }
             `}} />
-        </div>
+        </>
     );
 };
 

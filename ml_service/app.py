@@ -439,13 +439,15 @@ class SpeechAnalyzer:
             "tone": "Neutral",
             "speech_rate": 0,
             "filler_words": _extract_filler_count(transcription),
+            "filler_ratio": 0.0,
             "pause_analysis": {
                 "total_pauses": 0,
                 "average_pause_duration": 0.0,
                 "pauses_per_minute": 0.0
             },
             "energy_level": "Medium",
-            "clarity_score": 75
+            "clarity_score": 75,
+            "speech_quality_score": 70
         }
         
         if not transcription:
@@ -464,6 +466,7 @@ class SpeechAnalyzer:
                 pass
         
         result["speech_rate"] = int((word_count / duration_minutes) if duration_minutes > 0 else 0)
+        result["filler_ratio"] = round((result["filler_words"] / max(1, word_count)), 3)
         
         # 2. Tone analysis (heuristic)
         if "?" in transcription:
@@ -488,11 +491,265 @@ class SpeechAnalyzer:
         clarity = 85 - (filler_ratio * 50)  # Penalize fillers heavily
         clarity = max(20, min(95, clarity))
         result["clarity_score"] = int(clarity)
+
+        # 5. Pause frequency heuristic from sentence and hesitation markers
+        sentence_breaks = len([s for s in re.split(r'[.!?]+', transcription) if s.strip()])
+        hesitation_breaks = len(re.findall(r',|;|…|\.\.\.', transcription))
+        total_pauses = max(0, sentence_breaks - 1) + hesitation_breaks
+        pauses_per_minute = total_pauses / max(duration_minutes, 0.1)
+        avg_pause_duration = max(0.2, min(1.6, 0.35 + (result["filler_ratio"] * 1.8)))
+        result["pause_analysis"] = {
+            "total_pauses": int(total_pauses),
+            "average_pause_duration": round(avg_pause_duration, 2),
+            "pauses_per_minute": round(pauses_per_minute, 2)
+        }
+
+        # 6. Speech quality score for scoring integration
+        speech_rate_penalty = 0
+        if result["speech_rate"] < 95:
+            speech_rate_penalty = min(15, (95 - result["speech_rate"]) // 4)
+        elif result["speech_rate"] > 170:
+            speech_rate_penalty = min(15, (result["speech_rate"] - 170) // 5)
+
+        pause_penalty = 0
+        if pauses_per_minute > 18:
+            pause_penalty = min(12, int((pauses_per_minute - 18) * 0.8))
+
+        filler_penalty = min(18, int(result["filler_ratio"] * 120))
+        quality = 92 - speech_rate_penalty - pause_penalty - filler_penalty
+        result["speech_quality_score"] = int(max(25, min(98, quality)))
         
         return result
 
 
 speech_analyzer = SpeechAnalyzer()
+
+# ── Company-specific interview modes ───────────────────────────────────────────
+# Dataset structure:
+# COMPANY_QUESTION_BANK = {
+#   "amazon": {
+#     "behavioral": [{"id","difficulty","question","keywords"}...],
+#     "technical": [...],
+#     "coding_system": [...]
+#   },
+#   "google": {...},
+#   "tcs": {...}
+# }
+COMPANY_QUESTION_BANK: Dict[str, Dict[str, List[Dict]]] = {
+    "amazon": {
+        "behavioral": [
+            {"id": "amz-b-1", "difficulty": "easy", "question": "Tell me about a time you took ownership of a difficult task.", "keywords": ["ownership", "impact", "result"]},
+            {"id": "amz-b-2", "difficulty": "medium", "question": "Describe a situation where you disagreed with your team and how you handled it.", "keywords": ["conflict", "communication", "resolution"]},
+            {"id": "amz-b-3", "difficulty": "hard", "question": "Share a high-impact decision you made with limited data and how you mitigated risk.", "keywords": ["decision-making", "risk", "trade-off"]},
+        ],
+        "technical": [
+            {"id": "amz-t-1", "difficulty": "easy", "question": "Explain REST API design basics and common HTTP methods.", "keywords": ["REST", "GET", "POST", "status codes"]},
+            {"id": "amz-t-2", "difficulty": "medium", "question": "How would you design a reliable retry strategy for external API failures?", "keywords": ["retry", "backoff", "idempotency"]},
+            {"id": "amz-t-3", "difficulty": "hard", "question": "How would you optimize a high-throughput service with strict latency SLOs?", "keywords": ["latency", "caching", "profiling", "scalability"]},
+        ],
+        "coding_system": [
+            {"id": "amz-c-1", "difficulty": "easy", "question": "Design a simple URL shortener API and core data model.", "keywords": ["API", "database", "hashing"]},
+            {"id": "amz-c-2", "difficulty": "medium", "question": "How would you implement an LRU cache and explain its complexity?", "keywords": ["hashmap", "linked list", "O(1)"]},
+            {"id": "amz-c-3", "difficulty": "hard", "question": "Design an order processing system handling spikes during sales events.", "keywords": ["queue", "event-driven", "partitioning", "fault tolerance"]},
+        ],
+    },
+    "google": {
+        "behavioral": [
+            {"id": "ggl-b-1", "difficulty": "easy", "question": "Tell me about a project where you learned something quickly.", "keywords": ["learning", "adaptability", "impact"]},
+            {"id": "ggl-b-2", "difficulty": "medium", "question": "Describe a time you simplified a complex problem for your team.", "keywords": ["clarity", "collaboration", "problem solving"]},
+            {"id": "ggl-b-3", "difficulty": "hard", "question": "Describe a decision where you balanced correctness, speed, and scalability.", "keywords": ["trade-offs", "scalability", "engineering judgment"]},
+        ],
+        "technical": [
+            {"id": "ggl-t-1", "difficulty": "easy", "question": "Explain time and space complexity with an example.", "keywords": ["big-o", "complexity", "optimization"]},
+            {"id": "ggl-t-2", "difficulty": "medium", "question": "Compare SQL and NoSQL for a read-heavy product feature.", "keywords": ["consistency", "query patterns", "indexing"]},
+            {"id": "ggl-t-3", "difficulty": "hard", "question": "How would you design observability for a distributed microservice architecture?", "keywords": ["metrics", "logs", "tracing", "SLO"]},
+        ],
+        "coding_system": [
+            {"id": "ggl-c-1", "difficulty": "easy", "question": "Write an approach to detect duplicate elements efficiently.", "keywords": ["hash set", "complexity"]},
+            {"id": "ggl-c-2", "difficulty": "medium", "question": "Design a rate limiter and explain token bucket vs leaky bucket.", "keywords": ["rate limit", "token bucket", "distributed"]},
+            {"id": "ggl-c-3", "difficulty": "hard", "question": "Design a globally distributed cache invalidation strategy.", "keywords": ["cache coherence", "eventual consistency", "pub/sub"]},
+        ],
+    },
+    "tcs": {
+        "behavioral": [
+            {"id": "tcs-b-1", "difficulty": "easy", "question": "Introduce yourself and explain your career goals.", "keywords": ["communication", "motivation"]},
+            {"id": "tcs-b-2", "difficulty": "medium", "question": "Describe a time you worked effectively in a team under pressure.", "keywords": ["teamwork", "time management", "ownership"]},
+            {"id": "tcs-b-3", "difficulty": "hard", "question": "Share an example of handling client feedback and improving delivery quality.", "keywords": ["client focus", "quality", "improvement"]},
+        ],
+        "technical": [
+            {"id": "tcs-t-1", "difficulty": "easy", "question": "Explain OOP principles with simple examples.", "keywords": ["encapsulation", "inheritance", "polymorphism"]},
+            {"id": "tcs-t-2", "difficulty": "medium", "question": "How do you debug a production issue step by step?", "keywords": ["logs", "root cause", "rollback"]},
+            {"id": "tcs-t-3", "difficulty": "hard", "question": "How would you improve performance of a slow database query in production?", "keywords": ["index", "execution plan", "optimization"]},
+        ],
+        "coding_system": [
+            {"id": "tcs-c-1", "difficulty": "easy", "question": "Write logic to reverse words in a sentence.", "keywords": ["string", "loops"]},
+            {"id": "tcs-c-2", "difficulty": "medium", "question": "Design a basic employee leave management module.", "keywords": ["CRUD", "validation", "workflow"]},
+            {"id": "tcs-c-3", "difficulty": "hard", "question": "Design a scalable ticketing workflow for enterprise support teams.", "keywords": ["workflow", "state machine", "queue"]},
+        ],
+    },
+}
+
+COMPANY_SCORING_PATTERNS: Dict[str, Dict[str, float]] = {
+    "amazon": {"clarity": 0.20, "relevance": 0.25, "depth": 0.20, "confidence": 0.20, "structure": 0.15},
+    "google": {"clarity": 0.20, "relevance": 0.20, "depth": 0.30, "confidence": 0.15, "structure": 0.15},
+    "tcs": {"clarity": 0.25, "relevance": 0.20, "depth": 0.20, "confidence": 0.15, "structure": 0.20},
+    "general": {"clarity": 0.20, "relevance": 0.20, "depth": 0.20, "confidence": 0.20, "structure": 0.20},
+}
+
+def _normalize_company_mode(mode: str) -> str:
+    m = (mode or "").strip().lower()
+    if m in ("amazon", "google", "tcs"):
+        return m
+    return "general"
+
+def _difficulty_rank(level: str) -> int:
+    return {"easy": 0, "medium": 1, "hard": 2}.get((level or "medium").lower(), 1)
+
+def _pick_company_mode_question(company_mode: str, history: list[dict], current_difficulty: str) -> Optional[dict]:
+    mode = _normalize_company_mode(company_mode)
+    if mode == "general":
+        return None
+
+    bank = COMPANY_QUESTION_BANK.get(mode, {})
+    round_idx = sum(1 for h in (history or []) if "question" in h)
+    sections = ["behavioral", "technical", "coding_system"]
+    section = sections[round_idx % len(sections)]  # mode switching logic by round
+    questions = bank.get(section, [])
+    if not questions:
+        return None
+
+    asked_texts = set((h.get("question") or "").strip().lower() for h in (history or []) if "question" in h)
+    target_rank = _difficulty_rank(current_difficulty)
+    filtered = [q for q in questions if _difficulty_rank(q.get("difficulty", "medium")) == target_rank]
+    if not filtered:
+        filtered = questions
+
+    for q in filtered:
+        if q["question"].strip().lower() not in asked_texts:
+            return {"section": section, **q}
+    return {"section": section, **filtered[0]}
+
+def _company_weighted_score(company_mode: str, detailed_scores: Dict[str, int]) -> int:
+    weights = COMPANY_SCORING_PATTERNS.get(_normalize_company_mode(company_mode), COMPANY_SCORING_PATTERNS["general"])
+    total = 0.0
+    for metric, w in weights.items():
+        total += float(detailed_scores.get(metric, 0)) * float(w)
+    return _clamp_0_100(total)
+
+def _clamp_0_100(v: float) -> int:
+    return int(max(0, min(100, round(v))))
+
+
+def _structure_score(transcription: str) -> int:
+    """
+    Evaluate answer structure quality (0-100)
+    Heuristics: opening, connectors, conclusion, sentence variety.
+    """
+    if not transcription:
+        return 20
+
+    t = transcription.lower().strip()
+    words = t.split()
+    if len(words) < 8:
+        return 25
+
+    opening_markers = ["first", "to begin", "in this", "my approach", "let me"]
+    connector_markers = ["because", "therefore", "however", "also", "then", "for example", "so that"]
+    ending_markers = ["in summary", "overall", "finally", "to conclude", "as a result"]
+
+    opening = 1 if any(m in t for m in opening_markers) else 0
+    connectors = sum(1 for m in connector_markers if m in t)
+    ending = 1 if any(m in t for m in ending_markers) else 0
+    sentence_count = len([s for s in re.split(r'[.!?]+', transcription) if s.strip()])
+
+    base = 45
+    base += opening * 10
+    base += min(20, connectors * 4)
+    base += ending * 10
+    if sentence_count >= 3:
+        base += 10
+
+    return _clamp_0_100(base)
+
+
+def _confidence_metric(speech_data: Dict, clarity_0_10: int, relevance_0_10: int) -> int:
+    """
+    Confidence score (0-100) integrating speech + NLP.
+    """
+    tone = (speech_data or {}).get("tone", "Neutral")
+    fillers = int((speech_data or {}).get("filler_words", 0))
+    speech_clarity = int((speech_data or {}).get("clarity_score", 70))
+    speech_quality = int((speech_data or {}).get("speech_quality_score", 70))
+
+    tone_bonus = 0
+    if tone == "Confident":
+        tone_bonus = 8
+    elif tone == "Hesitant":
+        tone_bonus = -6
+    elif tone == "Nervous":
+        tone_bonus = -10
+
+    filler_penalty = min(12, fillers * 2)
+    nlp_anchor = ((clarity_0_10 + relevance_0_10) / 20.0) * 25
+
+    return _clamp_0_100((speech_clarity * 0.5) + (speech_quality * 0.3) + tone_bonus + nlp_anchor - filler_penalty)
+
+
+def _speech_actionable_tips(speech_data: Dict) -> List[str]:
+    tips: List[str] = []
+    filler_ratio = float((speech_data or {}).get("filler_ratio", 0.0))
+    speech_rate = int((speech_data or {}).get("speech_rate", 0))
+    ppm = float((speech_data or {}).get("pause_analysis", {}).get("pauses_per_minute", 0.0))
+
+    if filler_ratio > 0.08:
+        target_cut = max(20, min(50, int(filler_ratio * 300)))
+        tips.append(f"Reduce filler words by {target_cut}% by pausing silently instead of saying 'um' or 'uh'.")
+    elif filler_ratio > 0.04:
+        tips.append("Trim filler words slightly and use brief pauses between ideas.")
+    else:
+        tips.append("Great filler control. Maintain this speaking discipline.")
+
+    if speech_rate < 105:
+        tips.append("Increase speaking pace slightly to around 120-145 WPM for stronger delivery.")
+    elif speech_rate > 165:
+        tips.append("Slow down speaking speed to improve clarity and interviewer comprehension.")
+    else:
+        tips.append("Speech rate is in a good range. Keep the same pace.")
+
+    if ppm > 18:
+        tips.append("Reduce pause frequency by grouping ideas before speaking.")
+    elif ppm < 4:
+        tips.append("Add natural pauses between key points to improve structure.")
+    else:
+        tips.append("Pause frequency is balanced. Keep using deliberate pauses.")
+
+    return tips
+
+
+def _build_detailed_rubric(
+    clarity_0_10: int,
+    relevance_0_10: int,
+    technical_depth_0_10: int,
+    transcription: str,
+    speech_data: Dict
+) -> Dict:
+    """
+    Detailed normalized rubric (0-100 each metric):
+    clarity, relevance, depth, confidence, structure
+    """
+    clarity = _clamp_0_100(clarity_0_10 * 10)
+    relevance = _clamp_0_100(relevance_0_10 * 10)
+    depth = _clamp_0_100(technical_depth_0_10 * 10)
+    structure = _structure_score(transcription)
+    confidence = _confidence_metric(speech_data, clarity_0_10, relevance_0_10)
+
+    return {
+        "clarity": clarity,
+        "relevance": relevance,
+        "depth": depth,
+        "confidence": confidence,
+        "structure": structure
+    }
 
 
 # ╔════════════════════════════════════════════════════════════════════╗
@@ -591,6 +848,79 @@ def _analyze_answer_with_gemini(role: str, history: list[dict], transcription: s
             "next_question": _generate_question_with_gemini(role, history),
         }
 
+
+def _generate_tutor_feedback_with_llm(question: str, user_answer: str, keywords: List[str], role: str) -> dict:
+    """
+    AI Tutor mode:
+    - Ideal answer
+    - Comparison vs user answer
+    - Missing concepts and weak explanation areas
+    - Actionable coaching
+    """
+    fallback = {
+        "ideal_answer": "A strong answer should define the core concept, explain a practical approach, and include a concise example with trade-offs.",
+        "comparison": "Your answer addresses some parts, but can be more structured and complete.",
+        "missing_concepts": [],
+        "weak_areas": [],
+        "what_you_did_well": [
+            "You attempted to answer the question directly."
+        ],
+        "what_you_missed": [
+            "Include more concrete technical details and examples."
+        ],
+        "how_to_improve": [
+            "Use a structure: definition -> approach -> example -> trade-off.",
+            "Mention 2-3 role-specific keywords naturally."
+        ]
+    }
+
+    if genai is None:
+        return fallback
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return fallback
+
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        prompt = (
+            "You are an expert AI tutor for technical interview preparation.\n"
+            f"Role: {role}\n"
+            "Given the question and candidate answer, provide strict JSON with this schema:\n"
+            "{\n"
+            '  "ideal_answer": "2-5 sentence model answer",\n'
+            '  "comparison": "brief comparison of user answer vs ideal",\n'
+            '  "missing_concepts": ["..."],\n'
+            '  "weak_areas": ["..."],\n'
+            '  "what_you_did_well": ["..."],\n'
+            '  "what_you_missed": ["..."],\n'
+            '  "how_to_improve": ["..."]\n'
+            "}\n"
+            "Keep feedback practical and specific.\n\n"
+            f"Question: {question}\n"
+            f"User answer: {user_answer}\n"
+            f"Keywords to evaluate: {', '.join(keywords or [])}\n"
+        )
+        resp = model.generate_content(prompt)
+        raw = getattr(resp, "text", None) or str(resp)
+        raw = (raw or "").strip()
+        if raw.startswith("```"):
+            raw = raw.strip("`").strip()
+            parts = raw.split("\n", 1)
+            raw = parts[1] if len(parts) == 2 else parts[0]
+        data = json.loads(raw)
+        return {
+            "ideal_answer": str(data.get("ideal_answer") or fallback["ideal_answer"]),
+            "comparison": str(data.get("comparison") or fallback["comparison"]),
+            "missing_concepts": list(data.get("missing_concepts") or []),
+            "weak_areas": list(data.get("weak_areas") or []),
+            "what_you_did_well": list(data.get("what_you_did_well") or []),
+            "what_you_missed": list(data.get("what_you_missed") or []),
+            "how_to_improve": list(data.get("how_to_improve") or []),
+        }
+    except Exception:
+        return fallback
+
 # ── 1. NLP MODEL INITIALIZATION ──
 # We use 'all-MiniLM-L6-v2' - it's fast, lightweight, and great for skill matching
 model = SentenceTransformer('all-MiniLM-L6-v2') if SentenceTransformer else None
@@ -618,6 +948,11 @@ class ResumeAnalysisResponse(BaseModel):
     similarity_score: float
     experience_level: str # Junior, Mid, Senior
 
+
+class ResumeRoleAnalysisRequest(BaseModel):
+    resume_text: str
+    role: str
+
 # ── 3. RESUME NLP LOGIC ──
 
 def extract_experience_level(text: str):
@@ -627,6 +962,70 @@ def extract_experience_level(text: str):
     if max_year < 2: return "Junior"
     if max_year < 5: return "Mid-Level"
     return "Senior"
+
+
+ROLE_JOB_DESCRIPTION = {
+    "Full Stack Developer": "Build full stack web apps using React Node.js Express MongoDB SQL REST APIs Git and Docker.",
+    "Data Scientist": "Work on Python machine learning statistics pandas numpy scikit-learn model evaluation and SQL.",
+    "Frontend Engineer": "Develop responsive UIs with React JavaScript TypeScript CSS accessibility testing and performance optimization.",
+    "Backend Architect": "Design scalable backend systems with microservices cloud APIs databases caching messaging and CI/CD."
+}
+
+JOB_DATASET = [
+    {"title": "Frontend Developer Intern", "skills": ["React", "JavaScript", "CSS", "HTML", "Git"]},
+    {"title": "Backend Developer", "skills": ["Node.js", "Express", "REST API", "MongoDB", "SQL", "Docker"]},
+    {"title": "Full Stack Developer", "skills": ["React", "Node.js", "Express", "MongoDB", "REST API", "Git"]},
+    {"title": "Data Analyst", "skills": ["Python", "SQL", "Pandas", "NumPy", "Statistics"]},
+    {"title": "Machine Learning Engineer", "skills": ["Python", "Machine Learning", "Scikit-learn", "TensorFlow", "PyTorch"]},
+    {"title": "Cloud Backend Engineer", "skills": ["Microservices", "Docker", "Kubernetes", "AWS", "CI/CD"]},
+]
+
+
+def _get_role_job_description(role: str) -> str:
+    return ROLE_JOB_DESCRIPTION.get(role, ROLE_JOB_DESCRIPTION["Full Stack Developer"])
+
+
+def _recommend_jobs(extracted_skills: list[str], role: str) -> list[dict]:
+    extracted = {s.lower() for s in extracted_skills}
+    ranked = []
+
+    for job in JOB_DATASET:
+        required = job["skills"]
+        if not required:
+            continue
+        matched = [s for s in required if s.lower() in extracted]
+        score = int((len(matched) / len(required)) * 100)
+        if role.lower() in job["title"].lower():
+            score = min(100, score + 10)
+
+        reason = (
+            f"Matches {len(matched)}/{len(required)} key skills"
+            if matched else
+            "Build core skills to improve fit"
+        )
+        ranked.append({
+            "title": job["title"],
+            "match_score": score,
+            "reason": reason
+        })
+
+    ranked.sort(key=lambda x: x["match_score"], reverse=True)
+    return ranked[:5]
+
+
+def _build_improvement_plan(missing_skills: list[str], role: str) -> list[str]:
+    if not missing_skills:
+        return [
+            f"Tailor project bullet points for {role} using measurable outcomes.",
+            "Add impact metrics (latency, conversion, users, revenue) in experience section.",
+            "Keep resume to one page with ATS-friendly headings."
+        ]
+
+    top_missing = missing_skills[:5]
+    return [
+        f"Add proof of {skill} through one project bullet and one skill entry."
+        for skill in top_missing
+    ]
 
 @app.post("/analyze-resume", response_model=ResumeAnalysisResponse)
 async def analyze_resume(data: ResumeAnalysisRequest):
@@ -668,6 +1067,34 @@ async def analyze_resume(data: ResumeAnalysisRequest):
     }
 
 
+@app.post("/resume-role-analysis")
+async def resume_role_analysis(data: ResumeRoleAnalysisRequest):
+    if not model or not index:
+        raise HTTPException(status_code=500, detail="NLP Models not loaded.")
+
+    role = (data.role or "").strip() or "Full Stack Developer"
+    role_jd = _get_role_job_description(role)
+
+    resume_payload = ResumeAnalysisRequest(
+        resume_text=data.resume_text,
+        job_description=role_jd
+    )
+    base = await analyze_resume(resume_payload)
+
+    recommended_jobs = _recommend_jobs(base["extracted_skills"], role)
+    improvement_plan = _build_improvement_plan(base["missing_skills"], role)
+
+    return {
+        "role": role,
+        "extracted_skills": base["extracted_skills"],
+        "missing_skills": base["missing_skills"],
+        "similarity_score": base["similarity_score"],
+        "experience_level": base["experience_level"],
+        "recommended_jobs": recommended_jobs,
+        "improvement_plan": improvement_plan
+    }
+
+
 # ╔════════════════════════════════════════════════════════════════════╗
 # ║                         API ENDPOINTS                              ║
 # ╚════════════════════════════════════════════════════════════════════╝
@@ -675,6 +1102,8 @@ async def analyze_resume(data: ResumeAnalysisRequest):
 # Schema
 class StartInterviewRequest(BaseModel):
     role: str
+    company_mode: Optional[str] = "general"
+    current_difficulty: Optional[str] = "medium"
 
 
 class SpeechAnalysisResponse(BaseModel):
@@ -706,8 +1135,20 @@ async def health():
 async def start_interview(data: StartInterviewRequest):
     """Phase 1: Start interview and get first question"""
     role = (data.role or "").strip() or "Frontend Developer"
-    question = _generate_question_with_gemini(role, history=[])
-    return {"question": question}
+    company_mode = _normalize_company_mode(data.company_mode or "general")
+    current_difficulty = (data.current_difficulty or "medium").lower()
+
+    company_q = _pick_company_mode_question(company_mode, history=[], current_difficulty=current_difficulty)
+    if company_q:
+        question = company_q["question"]
+    else:
+        question = _generate_question_with_gemini(role, history=[])
+    return {
+        "question": question,
+        "company_mode": company_mode,
+        "question_section": company_q["section"] if company_q else "general",
+        "question_difficulty": company_q["difficulty"] if company_q else current_difficulty
+    }
 
 
 @app.post("/submit-answer")
@@ -716,6 +1157,8 @@ async def submit_answer(
     role: str = Form(...),
     history: str = Form(...),
     question: str = Form(default=""),
+    company_mode: str = Form(default="general"),
+    current_difficulty: str = Form(default="medium"),
 ):
     """
     Comprehensive interview analysis: Phase 1-5
@@ -728,6 +1171,7 @@ async def submit_answer(
     - Phase 5: Speech analysis
     """
     role = (role or "").strip() or "Frontend Developer"
+    company_mode = _normalize_company_mode(company_mode)
 
     # Parse history
     try:
@@ -758,6 +1202,14 @@ async def submit_answer(
 
         # ── PHASE 5: Speech Analysis ──
         speech_data = speech_analyzer.analyze_speech(audio_path, transcription)
+        speech_tips = _speech_actionable_tips(speech_data)
+        detailed_scores = _build_detailed_rubric(
+            clarity,
+            relevance,
+            technical_depth,
+            transcription,
+            speech_data
+        )
 
         # ── PHASE 3: Readiness Classification ──
         scores = {
@@ -766,7 +1218,7 @@ async def submit_answer(
             "technical_depth": technical_depth,
             "keyword_count": len(keywords_matched),
             "fillers": speech_data["filler_words"],
-            "confidence_score": max(20, min(100, clarity * 10)),  # Scale to 0-100
+            "confidence_score": detailed_scores["confidence"],
         }
 
         readiness_pred = readiness_classifier.predict_readiness([scores])
@@ -780,10 +1232,26 @@ async def submit_answer(
             parsed_history + [{"answer": transcription}],
             transcription
         )
+        tutor_feedback = _generate_tutor_feedback_with_llm(
+            question=question or "General technical question",
+            user_answer=transcription,
+            keywords=keywords_matched,
+            role=role
+        )
 
         next_question = gemini_analysis.get("next_question", "")
-        if not next_question:
+        section = "general"
+        q_difficulty = current_difficulty
+
+        company_q = _pick_company_mode_question(company_mode, parsed_history, current_difficulty)
+        if company_q:
+            next_question = company_q["question"]
+            section = company_q["section"]
+            q_difficulty = company_q["difficulty"]
+        elif not next_question:
             next_question = _generate_question_with_gemini(role, parsed_history)
+
+        company_weighted = _company_weighted_score(company_mode, detailed_scores)
 
         # Combine all analyses
         return {
@@ -795,6 +1263,8 @@ async def submit_answer(
             "relevance": relevance,
             "technical_depth": technical_depth,
             "keywords_matched": keywords_matched,
+            "detailed_scores": detailed_scores,
+            "company_weighted_score": company_weighted,
             
             # Phase 3: Classification
             "readiness_status": readiness_pred["status"],
@@ -811,12 +1281,17 @@ async def submit_answer(
             
             # Phase 5: Speech Analysis
             "speech_analysis": speech_data,
+            "speech_tips": speech_tips,
             
             # UI Display
             "feedback": gemini_analysis.get("feedback", "Good answer."),
             "next_question": next_question,
             "confidence_score": readiness_pred.get("confidence", 0.5) * 100,
             "rating": readiness_pred["readiness_score"],
+            "tutor_feedback": tutor_feedback,
+            "company_mode": company_mode,
+            "question_section": section,
+            "question_difficulty": q_difficulty,
             
             # Legacy fields for backwards compatibility
             "fillers_detected": speech_data["filler_words"],

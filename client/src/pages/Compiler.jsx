@@ -4,26 +4,65 @@ import Editor from '@monaco-editor/react';
 import { Play, RotateCcw, Save, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const Compiler = () => {
-    const [code, setCode] = useState(`// Welcome to CareerQuest Compiler
-// Practice your logic here
-
+const STARTER_CODE = {
+    javascript: `// JavaScript starter
 function solution(arr) {
-    // Write your code here
     return arr.sort((a, b) => a - b);
 }
 
-console.log(solution([5, 2, 9, 1, 5, 6]));
-`);
+console.log(solution([5, 2, 9, 1, 5, 6]));`,
+    python: `# Python starter
+def solution(arr):
+    return sorted(arr)
+
+print(solution([5, 2, 9, 1, 5, 6]))`,
+    cpp: `// C++ starter
+#include <bits/stdc++.h>
+using namespace std;
+
+vector<int> solution(vector<int> arr) {
+    sort(arr.begin(), arr.end());
+    return arr;
+}
+
+int main() {
+    vector<int> arr = {5, 2, 9, 1, 5, 6};
+    vector<int> ans = solution(arr);
+    for (int x : ans) cout << x << " ";
+    return 0;
+}`,
+    java: `// Java starter (class name must be Main)
+import java.util.*;
+
+public class Main {
+    static List<Integer> solution(List<Integer> arr) {
+        Collections.sort(arr);
+        return arr;
+    }
+
+    public static void main(String[] args) {
+        List<Integer> arr = new ArrayList<>(Arrays.asList(5, 2, 9, 1, 5, 6));
+        System.out.println(solution(arr));
+    }
+}`
+};
+
+const Compiler = () => {
+    const [code, setCode] = useState(STARTER_CODE.javascript);
     const [output, setOutput] = useState("");
     const [language, setLanguage] = useState("javascript");
 
     const runCode = async () => {
         setOutput("Running...\n");
+        const token = localStorage.getItem('token');
         try {
             const res = await axios.post('http://localhost:5000/api/submissions/run', {
                 code,
                 language
+            }, {
+                headers: {
+                    'x-auth-token': token || ''
+                }
             });
             setOutput(res.data.output);
         } catch (err) {
@@ -42,14 +81,19 @@ console.log(solution([5, 2, 9, 1, 5, 6]));
                     <select
                         className="lang-select"
                         value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
+                        onChange={(e) => {
+                            const nextLang = e.target.value;
+                            setLanguage(nextLang);
+                            setCode(STARTER_CODE[nextLang] || '');
+                            setOutput('');
+                        }}
                     >
                         <option value="javascript">JavaScript</option>
                         <option value="python">Python</option>
                         <option value="cpp">C++</option>
                         <option value="java">Java</option>
                     </select>
-                    <button className="icon-btn" onClick={() => setCode("")}><RotateCcw size={18} /></button>
+                    <button className="icon-btn" onClick={() => setCode(STARTER_CODE[language] || "")}><RotateCcw size={18} /></button>
                     <button className="icon-btn"><Save size={18} /></button>
                     <button className="primary-cta run-btn" onClick={runCode}>
                         <Play size={18} fill="white" /> Run Code

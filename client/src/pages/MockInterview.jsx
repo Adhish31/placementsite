@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { 
     Mic, MicOff, Play, Send, Sparkles, 
@@ -9,23 +9,52 @@ import { motion, AnimatePresence } from 'framer-motion';
 const MockInterview = () => {
     // ── State ──
     const [role, setRole] = useState('Frontend Developer');
+    const [companyMode, setCompanyMode] = useState('general');
     const [status, setStatus] = useState('idle'); // idle, starting, active, processing
     const [history, setHistory] = useState([]); // [{type: 'question', text: '...'}, {type: 'answer', text: '...'}, ...]
     const [feedback, setFeedback] = useState(null);
     const [isRecording, setIsRecording] = useState(false);
+    const [timeLimit, setTimeLimit] = useState(75);
+    const [timeLeft, setTimeLeft] = useState(75);
+    const [isAutoSubmit, setIsAutoSubmit] = useState(false);
     
     // ── Refs (Audio context) ──
     const mediaRecorder = useRef(null);
     const audioChunks = useRef([]);
+    const recordingStartedAt = useRef(null);
+    const submitMetaRef = useRef({ timeTaken: 0, allottedTime: 75, autoSubmitted: false });
+
+    const randomTimeLimit = () => 60 + Math.floor(Math.random() * 31); // 60-90
+
+    useEffect(() => {
+        if (status !== 'active' || !isRecording) return;
+
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    setIsAutoSubmit(true);
+                    stopRecording(true);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [status, isRecording]);
 
     const startInterview = async () => {
         setStatus('starting');
         setHistory([]);
         setFeedback(null);
+        const firstLimit = randomTimeLimit();
+        setTimeLimit(firstLimit);
+        setTimeLeft(firstLimit);
         
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.post('http://localhost:5000/api/interview/start', { role }, {
+            const res = await axios.post('http://localhost:5000/api/interview/start', { role, companyMode }, {
                 headers: { 'x-auth-token': token || '' }
             });
             
@@ -49,28 +78,42 @@ const MockInterview = () => {
             
             mediaRecorder.current.onstop = async () => {
                 const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
-                submitAnswer(audioBlob);
+                submitAnswer(audioBlob, submitMetaRef.current);
             };
 
             mediaRecorder.current.start();
+            recordingStartedAt.current = Date.now();
+            setTimeLeft(timeLimit);
             setIsRecording(true);
         } catch (err) {
             alert("Microphone access denied.");
         }
     };
 
-    const stopRecording = () => {
+    const stopRecording = (autoSubmitted = false) => {
         if (mediaRecorder.current && isRecording) {
+            const elapsed = recordingStartedAt.current
+                ? Math.max(1, Math.round((Date.now() - recordingStartedAt.current) / 1000))
+                : 0;
+            submitMetaRef.current = {
+                timeTaken: elapsed,
+                allottedTime: timeLimit,
+                autoSubmitted
+            };
             mediaRecorder.current.stop();
             setIsRecording(false);
             setStatus('processing');
         }
     };
 
-    const submitAnswer = async (audioBlob) => {
+    const submitAnswer = async (audioBlob, submitMeta = { timeTaken: 0, allottedTime: 75, autoSubmitted: false }) => {
         const formData = new FormData();
         formData.append('audio', audioBlob, 'answer.wav');
         formData.append('role', role);
+        formData.append('companyMode', companyMode);
+        formData.append('timeTaken', String(submitMeta.timeTaken || 0));
+        formData.append('allottedTime', String(submitMeta.allottedTime || timeLimit));
+        formData.append('autoSubmitted', String(!!submitMeta.autoSubmitted));
         
         // Convert history for the backend (excluding UI types)
         const chatHistory = history.map(h => ({
@@ -98,13 +141,26 @@ const MockInterview = () => {
                 rating: res.data.rating,
                 text: res.data.feedback,
                 fillers: res.data.fillers_detected,
-                confidence: res.data.confidence_score
+                confidence: res.data.confidence_score,
+                companyWeightedScore: res.data.company_weighted_score,
+                questionSection: res.data.question_section,
+                timeTaken: res.data.time_taken,
+                allottedTime: res.data.allotted_time,
+                timeEfficiency: res.data.time_efficiency,
+                timingFeedback: res.data.timing_feedback
             });
-            
+            const nextLimit = randomTimeLimit();
+            setTimeLimit(nextLimit);
+            setTimeLeft(nextLimit);
+            setIsAutoSubmit(false);
             setStatus('active');
         } catch (err) {
             console.error(err);
             alert("Analysis failed. Try again.");
+            const nextLimit = randomTimeLimit();
+            setTimeLimit(nextLimit);
+            setTimeLeft(nextLimit);
+            setIsAutoSubmit(false);
             setStatus('active');
         }
     };
@@ -134,6 +190,20 @@ const MockInterview = () => {
                                         <option>Data Scientist</option>
                                     </select>
                                 </div>
+                                <div className="form-group">
+                                    <label>Company Mode</label>
+                                    <select value={companyMode} onChange={(e) => setCompanyMode(e.target.value)}>
+                                        <option value="general">General</option>
+                                        <option value="amazon">Amazon</option>
+                                        <option value="google">Google</option>
+                                        <option value="tcs">TCS</option>
+                                    </select>
+                                </div>
+                                <div className="timer-preview">
+                                    <div><b>Timed Answer Mode:</b> Enabled</div>
+                                    <div>Per-question limit: <b>{timeLimit}s</b> (auto-random 60-90s)</div>
+                                    <div>Auto-submit on timeout: <b>On</b></div>
+                                </div>
                                 <button className="primary-btn" onClick={startInterview}>
                                     <Play size={18} /> Start AI Session
                                 </button>
@@ -141,6 +211,9 @@ const MockInterview = () => {
                         ) : (
                             <div className="live-feedback-view">
                                 <div className="session-tag">Live Session: <b>{role}</b></div>
+                                <div className={`timer-chip ${timeLeft <= 10 ? 'danger' : timeLeft <= 20 ? 'warn' : ''}`}>
+                                    Time Left: {timeLeft}s / {timeLimit}s
+                                </div>
                                 
                                 {feedback && (
                                     <div className="results-panel">
@@ -154,9 +227,36 @@ const MockInterview = () => {
                                                 <span className="value">{feedback.fillers}</span>
                                             </div>
                                         </div>
+                                        <div className="stat-row">
+                                            <div className="stat-box">
+                                                <span className="label">Time Efficiency</span>
+                                                <span className="value">{feedback.timeEfficiency}%</span>
+                                            </div>
+                                            <div className="stat-box">
+                                                <span className="label">Time Taken</span>
+                                                <span className="value">{feedback.timeTaken}s</span>
+                                            </div>
+                                        </div>
+                                        <div className="stat-row">
+                                            <div className="stat-box">
+                                                <span className="label">Company Score</span>
+                                                <span className="value">{feedback.companyWeightedScore ?? '--'}</span>
+                                            </div>
+                                            <div className="stat-box">
+                                                <span className="label">Round Type</span>
+                                                <span className="value" style={{ fontSize: '1rem', textTransform: 'capitalize' }}>
+                                                    {feedback.questionSection?.replace('_', ' ') || 'general'}
+                                                </span>
+                                            </div>
+                                        </div>
                                         <div className="feedback-text">
                                             <Sparkles size={16} /> {feedback.text}
                                         </div>
+                                        {feedback.timingFeedback && (
+                                            <div className="feedback-text" style={{ marginTop: '0.4rem' }}>
+                                                <Sparkles size={16} /> {feedback.timingFeedback}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -171,13 +271,16 @@ const MockInterview = () => {
                                             <span>Click to Talk</span>
                                         </button>
                                     ) : (
-                                        <button className="mic-btn active" onClick={stopRecording}>
+                                        <button className="mic-btn active" onClick={() => stopRecording(false)}>
                                             <MicOff size={32} />
                                             <div className="pulse-ring"></div>
                                             <span>Stop & Analyze</span>
                                         </button>
                                     )}
                                     {status === 'processing' && <div className="processing-text">AI is transcribing...</div>}
+                                    {isAutoSubmit && status === 'processing' && (
+                                        <div className="processing-text">Time is up. Auto-submitting your answer...</div>
+                                    )}
                                 </div>
                                 
                                 <button className="reset-btn" onClick={() => setStatus('idle')}>
@@ -220,8 +323,12 @@ const MockInterview = () => {
                 .form-group { text-align: left; }
                 .form-group label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.5rem; }
                 .form-group select { width: 100%; background: var(--glass); border: 1px solid var(--glass-border); padding: 0.8rem; color: white; border-radius: 10px; }
+                .timer-preview { text-align: left; background: var(--glass); border: 1px solid var(--glass-border); padding: 0.9rem 1rem; border-radius: 10px; font-size: 0.85rem; color: var(--text-dim); line-height: 1.6; }
                 
                 .session-tag { background: var(--primary-glow-sm); color: var(--primary-light); padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; margin-bottom: 2rem; display: inline-block; }
+                .timer-chip { margin: 0 auto 1rem; width: fit-content; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--glass-border); background: var(--glass); color: #b6f5c0; font-weight: 700; font-size: 0.85rem; }
+                .timer-chip.warn { color: #ffbd2e; }
+                .timer-chip.danger { color: #ff5f56; box-shadow: 0 0 16px rgba(255,95,86,0.25); }
                 
                 .results-panel { margin-bottom: 2rem; animation: slideIn 0.3s ease; }
                 .stat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }

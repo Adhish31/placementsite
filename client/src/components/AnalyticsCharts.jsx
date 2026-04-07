@@ -1,38 +1,55 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, Legend, BarChart, Bar
+    PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { motion } from 'framer-motion';
 
 const AnalyticsCharts = () => {
-    // Mock Data
-    const trendData = [
-        { name: 'Test 1', score: 65, avg: 60 },
-        { name: 'Test 2', score: 72, avg: 62 },
-        { name: 'Test 3', score: 68, avg: 65 },
-        { name: 'Test 4', score: 85, avg: 68 },
-        { name: 'Test 5', score: 78, avg: 70 },
-        { name: 'Test 6', score: 92, avg: 72 },
-    ];
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [analytics, setAnalytics] = useState({
+        summary: { currentScore: 0, estimatedReadinessDate: 'Need more sessions' },
+        scoreTrend: [],
+        confidenceTrend: [],
+        topicPerformance: []
+    });
 
-    const topicData = [
-        { name: 'DSA', value: 400 },
-        { name: 'Aptitude', value: 300 },
-        { name: 'OS', value: 200 },
-        { name: 'DBMS', value: 150 },
-    ];
-
-    const weakAreas = [
-        { topic: 'Dynamic Programming', progress: 35, color: '#ff5f56' },
-        { topic: 'System Design', progress: 45, color: '#ffbd2e' },
-        { topic: 'B-Trees', progress: 55, color: '#4cc9f0' },
-    ];
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            setLoading(true);
+            setError('');
+            try {
+                const token = localStorage.getItem('token');
+                const res = await axios.get('http://localhost:5000/api/interview/analytics/dashboard', {
+                    headers: { 'x-auth-token': token || '' }
+                });
+                setAnalytics(res.data || analytics);
+            } catch (err) {
+                setError(err.response?.data?.message || 'Unable to load analytics.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAnalytics();
+    }, []);
 
     const COLORS = ['#9d4edd', '#4cc9f0', '#27c93f', '#ffbd2e'];
+    const trendData = (analytics.scoreTrend || []).map((x) => ({ name: x.date?.slice(5) || 'N/A', score: x.score }));
+    const confidenceData = (analytics.confidenceTrend || []).map((x) => ({ name: x.date?.slice(5) || 'N/A', confidence: x.confidence }));
+    const topicData = (analytics.topicPerformance || []).map((x) => ({ name: x.topic || 'general', value: x.attempts || 0, score: x.avgScore || 0 }));
+    const weakAreas = (analytics.topicPerformance || [])
+        .map((t) => ({ topic: t.topic, progress: t.avgScore, color: '#4cc9f0' }))
+        .sort((a, b) => a.progress - b.progress)
+        .slice(0, 3);
 
     return (
         <div className="analytics-grid">
+            {loading && <div className="chart-card glass-card span-2"><h3>Loading analytics...</h3></div>}
+            {!loading && error && <div className="chart-card glass-card span-2"><h3>{error}</h3></div>}
+            {!loading && !error && (
+                <>
             {/* Performance Trend */}
             <motion.div
                 className="chart-card glass-card span-2"
@@ -51,7 +68,26 @@ const AnalyticsCharts = () => {
                                 itemStyle={{ color: '#fff' }}
                             />
                             <Line type="monotone" dataKey="score" stroke="#9d4edd" strokeWidth={3} dot={{ r: 6 }} activeDot={{ r: 8 }} />
-                            <Line type="monotone" dataKey="avg" stroke="#4cc9f0" strokeDasharray="5 5" />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+            </motion.div>
+
+            <motion.div
+                className="chart-card glass-card"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.1 }}
+            >
+                <h3>Confidence Improvement</h3>
+                <div style={{ width: '100%', height: 300 }}>
+                    <ResponsiveContainer>
+                        <LineChart data={confidenceData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                            <XAxis dataKey="name" stroke="#adb5bd" fontSize={12} />
+                            <YAxis stroke="#adb5bd" fontSize={12} />
+                            <Tooltip contentStyle={{ background: 'rgba(26, 26, 29, 0.9)', border: '1px solid var(--glass-border)', borderRadius: '10px' }} />
+                            <Line type="monotone" dataKey="confidence" stroke="#27c93f" strokeWidth={3} dot={{ r: 5 }} />
                         </LineChart>
                     </ResponsiveContainer>
                 </div>
@@ -114,7 +150,12 @@ const AnalyticsCharts = () => {
                         </div>
                     ))}
                 </div>
+                <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: 'var(--text-dim)' }}>
+                    Estimated readiness date: <b>{analytics.summary?.estimatedReadinessDate || 'Need more sessions'}</b>
+                </div>
             </motion.div>
+                </>
+            )}
 
             <style dangerouslySetInnerHTML={{
                 __html: `

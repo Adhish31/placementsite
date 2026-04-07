@@ -19,6 +19,11 @@ const InterviewSessionSchema = new mongoose.Schema({
         required: true, // e.g., "Frontend Developer", "Data Scientist"
         enum: ['Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Data Scientist', 'DevOps Engineer']
     },
+    companyMode: {
+        type: String,
+        enum: ['general', 'amazon', 'google', 'tcs'],
+        default: 'general'
+    },
     
     domain: String, // e.g., "Web Development", "Machine Learning"
     
@@ -35,7 +40,14 @@ const InterviewSessionSchema = new mongoose.Schema({
     
     questions: [{
         _id: mongoose.Schema.Types.ObjectId,
+        questionRef: { type: mongoose.Schema.Types.ObjectId, ref: 'Question' },
         text: String,
+        section: { type: String, default: 'general' },
+        difficulty: {
+            type: String,
+            enum: ['easy', 'medium', 'hard'],
+            default: 'medium'
+        },
         questionNumber: Number,
         timestamp: { type: Date, default: Date.now }
     }],
@@ -46,6 +58,9 @@ const InterviewSessionSchema = new mongoose.Schema({
         transcription: String,
         fillerCount: Number, // Detected "um", "uh", etc.
         duration: Number, // in seconds
+        timeTaken: Number, // seconds spent answering
+        allottedTime: Number, // allowed seconds for this question
+        autoSubmitted: { type: Boolean, default: false },
         pauseMetrics: {
             totalPauses: Number,
             averagePauseDuration: Number,
@@ -70,6 +85,24 @@ const InterviewSessionSchema = new mongoose.Schema({
         weakAreas: [String],
         // AI feedback for this answer
         feedback: String,
+        detailedRubric: {
+            clarity: { type: Number, min: 0, max: 100 },
+            relevance: { type: Number, min: 0, max: 100 },
+            depth: { type: Number, min: 0, max: 100 },
+            confidence: { type: Number, min: 0, max: 100 },
+            structure: { type: Number, min: 0, max: 100 }
+        },
+        tutorFeedback: {
+            idealAnswer: String,
+            comparison: String,
+            missingConcepts: [String],
+            weakAreas: [String],
+            whatYouDidWell: [String],
+            whatYouMissed: [String],
+            howToImprove: [String]
+        },
+        timeEfficiency: { type: Number, min: 0, max: 100 },
+        timePenalty: { type: Number, min: 0, max: 100, default: 0 },
         timestamp: { type: Date, default: Date.now }
     }],
     
@@ -162,6 +195,7 @@ const InterviewSessionSchema = new mongoose.Schema({
         // Speech clarity score (0-100)
         clarityScore: { type: Number, min: 0, max: 100 }
     },
+    speechTips: [String],
     
     // Feedback & Recommendations
     feedback: {
@@ -169,6 +203,23 @@ const InterviewSessionSchema = new mongoose.Schema({
         positivePoints: [String],
         areasForImprovement: [String],
         sessionSummary: String
+    },
+
+    // Adaptive difficulty engine state
+    adaptiveDifficulty: {
+        currentLevel: {
+            type: String,
+            enum: ['easy', 'medium', 'hard'],
+            default: 'medium'
+        },
+        transitions: [{
+            from: { type: String, enum: ['easy', 'medium', 'hard'] },
+            to: { type: String, enum: ['easy', 'medium', 'hard'], required: true },
+            answerScore: { type: Number, min: 0, max: 100, default: 0 },
+            confidenceScore: { type: Number, min: 0, max: 100, default: 0 },
+            reason: { type: String, default: '' },
+            at: { type: Date, default: Date.now }
+        }]
     },
     
     // Status

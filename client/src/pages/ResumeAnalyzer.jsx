@@ -14,6 +14,8 @@ const JOB_ROLES = [
     'Backend Architect',
 ];
 
+const API_BASE = 'http://localhost:5000';
+
 const ResumeAnalyzer = () => {
     const [file, setFile] = useState(null);
     const [analyzing, setAnalyzing] = useState(false);
@@ -35,7 +37,7 @@ const ResumeAnalyzer = () => {
 
         try {
             const res = await axios.post(
-                'http://localhost:5000/api/resume/analyze',
+                `${API_BASE}/api/resume/analyze`,
                 formData,
                 {
                     headers: {
@@ -242,6 +244,39 @@ const ResumeAnalyzer = () => {
                                 </ul>
                             </div>
                         </div>
+
+                        {/* ML Job Suggestions */}
+                        <div className="keywords-card glass-card">
+                            <div className="card-header">
+                                <BarChart2 className="icon purple" />
+                                <h3>ML Job Suggestions</h3>
+                            </div>
+                            <p className="keyword-insight">
+                                Experience Level: <b>{results.experienceLevel || 'N/A'}</b>
+                                {' '}• Similarity: <b>{Math.round(results.similarityScore || 0)}%</b>
+                            </p>
+                            <div className="feedback-grid" style={{ marginTop: '1rem' }}>
+                                {(results.recommendedJobs || []).map((job, i) => (
+                                    <div key={`${job.title}-${i}`} className="feedback-item">
+                                        <span className="fb-label">{job.title}</span>
+                                        <p className="fb-text">
+                                            Match: {job.matchScore}%<br />
+                                            {job.reason}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Improvement Plan */}
+                        {(results.improvementPlan || []).length > 0 && (
+                            <div className="critique-section glass-card yellow-border">
+                                <div className="section-title"><Zap size={18} /> ML Improvement Plan</div>
+                                <ul>
+                                    {(results.improvementPlan || []).map((item, i) => <li key={i}>{item}</li>)}
+                                </ul>
+                            </div>
+                        )}
 
                         {/* Section Feedback */}
                         {results.sectionFeedback && (
